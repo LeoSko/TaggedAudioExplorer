@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name" translatable="false">Tagged Audio Explorer</string>
+    <string name="change_dir">Change dir</string>
+</resources>
