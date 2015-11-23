@@ -1,4 +1,7 @@
 <resources>
     <string name="app_name" translatable="false">Tagged Audio Explorer</string>
     <string name="change_dir">Change dir</string>
+    <string name="tap_me">Tap me</string>
+    <string name="copy_bpm" translatable="false"><![CDATA[<-]]></string>
+    <string name="err_no_bpm_tag">There is no BPM tag in file</string>
 </resources>
