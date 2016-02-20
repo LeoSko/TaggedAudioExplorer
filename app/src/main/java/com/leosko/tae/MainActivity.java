@@ -4,10 +4,12 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Environment;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.text.format.Formatter;
 import android.text.format.Time;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -18,10 +20,19 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileFilter;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
 import java.security.Timestamp;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.GregorianCalendar;
 import java.util.LinkedList;
@@ -31,6 +42,8 @@ import java.util.Queue;
 public class MainActivity extends AppCompatActivity
 {
     public static final String BPM_AUTO_DEFAULT = "...";
+    public static final String PLAYLIST_DIR = Environment.getExternalStorageDirectory().toString() + "/" + Environment.DIRECTORY_MUSIC;
+    public static final String PLAYLIST_PATH = PLAYLIST_DIR + "/tae.m3u8";
     private Context cntxt;
     private AudioListViewAdapter alva;
     private List<Audio> audios;
@@ -104,18 +117,58 @@ public class MainActivity extends AppCompatActivity
             });
             for (File file: mp3files)
             {
-                alva.add(new Audio(file));
+                Audio a = new Audio(file);
+                alva.add(a);
+                //now resolve duration for each file
+                MediaPlayer mp = MediaPlayer.create(getApplicationContext(), Uri.parse(file.getAbsolutePath()));
+                a.setDuration(mp.getDuration());
+                mp.release();
             }
-            alva.sort(new Comparator<Audio>()
+            //now turn off from adding to m3u8 playlist the ones that already here
+            File playlist = new File(PLAYLIST_PATH);
+            //read it
+            try
             {
-                @Override
-                public int compare(Audio lhs, Audio rhs)
+                FileReader fr = new FileReader(playlist);
+                char[] buffer = new char[8096];
+                fr.read(buffer, 0, 8096);
+                String temp = new String(buffer);
+                String[] paths = temp.split("\r\n");
+                for (String path : paths)
                 {
-                    return lhs.getBpm() - rhs.getBpm();
+                    //now go through audios to check if they are in the list
+                    for (int i = 0; i < alva.getCount(); i++)
+                    {
+                        Audio a = alva.getItem(i);
+                        String p = a.getFile().getAbsolutePath().substring(PLAYLIST_DIR.length() + 1);
+                        if (path.equals(p))
+                        {
+                            a.setInPlaylist(true);
+                            break;
+                        }
+                    }
                 }
-            });
-            curDir = chosenDir;
-            sp.edit().putString(getString(R.string.dir), chosenDir).commit();
+                fr.close();
+            }
+            catch (Exception e)
+            {
+                e.printStackTrace();
+                return;
+            }
+            finally
+            {
+                //we finally checked them all, now sort and show
+                alva.sort(new Comparator<Audio>()
+                {
+                    @Override
+                    public int compare(Audio lhs, Audio rhs)
+                    {
+                        return lhs.getBpm() - rhs.getBpm();
+                    }
+                });
+                curDir = chosenDir;
+                sp.edit().putString(getString(R.string.dir), chosenDir).commit();
+            }
         }
     }
 
@@ -123,6 +176,7 @@ public class MainActivity extends AppCompatActivity
     {
         private EditText bpmet;
         private TextView bpmautotv;
+        private Button addToPlaylistBtn;
 
         @Override
         public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id)
@@ -140,6 +194,34 @@ public class MainActivity extends AppCompatActivity
             bpmet = (EditText) v.findViewById(R.id.bpm_manual);
             bpmet.setText(String.valueOf(a.getBpm()));
 
+            addToPlaylistBtn = (Button) v.findViewById(R.id.m3u_add_btn);
+            addToPlaylistBtn.setEnabled(a.isInPlaylist() == false);
+            addToPlaylistBtn.setOnClickListener(new View.OnClickListener()
+            {
+                @Override
+                public void onClick(View v)
+                {
+                    try
+                    {
+                        // write to the end of file new track
+                        File playlist = new File(PLAYLIST_PATH);
+                        String src = playlist.getAbsolutePath();
+                        OutputStream out = new FileOutputStream(src, true);
+                        String toWrite = a.getFile().getAbsolutePath().substring(PLAYLIST_DIR.length() + 1) + "\r\n";
+                        byte s[] = toWrite.getBytes();
+                        out.write(s);
+                        out.close();
+                        addToPlaylistBtn.setText("Ok");
+                        addToPlaylistBtn.setEnabled(false);
+                        a.setInPlaylist(true);
+                        alva.notifyDataSetChanged();
+                    }
+                    catch (Exception e)
+                    {
+                        e.printStackTrace();
+                    }
+                }
+            });
             bpmautotv = (TextView) v.findViewById(R.id.bpm_auto);
             bpmautotv.setText(BPM_AUTO_DEFAULT);
             v.findViewById(R.id.cancel_btn).setOnClickListener(new View.OnClickListener()

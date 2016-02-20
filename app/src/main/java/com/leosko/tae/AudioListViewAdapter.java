@@ -5,6 +5,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
@@ -42,10 +44,25 @@ public class AudioListViewAdapter extends ArrayAdapter<Audio>
 
         TextView text = (TextView) mView.findViewById(R.id.fileNameText);
         TextView bpmtext = (TextView) mView.findViewById(R.id.bpmText);
+        TextView duration = (TextView) mView.findViewById(R.id.durationText);
+        final CheckBox inPlaylist = (CheckBox) mView.findViewById(R.id.inPlaylist);
 
         if (items.get(position) != null)
         {
             Audio a = items.get(position);
+            int mins = a.getDuration() / 60000;
+            int secs = (a.getDuration() - mins * 60000) / 1000;
+            duration.setText(String.format("%02d:%02d", mins,  secs));
+            inPlaylist.setEnabled(true);
+            inPlaylist.setChecked(a.isInPlaylist());
+            /*inPlaylist.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener(){
+                @Override
+                public void onCheckedChanged(CompoundButton buttonView,
+                                             boolean isChecked) {
+                    inPlaylist.setChecked(!isChecked);
+                }
+            });*/
+
             text.setText(a.getFile().getName());
             if (a.getBpm() > 0)
             {

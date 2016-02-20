@@ -1,5 +1,7 @@
 package com.leosko.tae;
 
+import android.media.MediaPlayer;
+import android.net.Uri;
 import android.os.AsyncTask;
 
 import org.json.JSONObject;
@@ -24,13 +26,22 @@ public class Audio
 {
     private File file;
     private int bpm = 0;
+    private int duration = 0;
     private static final char[] BPM_PATTERN = { 0x54, 0x42, 0x50, 0x4D, 0x00, 0x00, 0x00,/* length, differs: 0x07, 0x00, 0x00, 0x01, 0xFF, 0xFE*/};
     private static final String BPM_STR = new String(BPM_PATTERN);
     private static final char[] BPM_L = { 0x05, 0x07, 0x09 };
 
+    public void setInPlaylist(boolean inPlaylist)
+    {
+        isInPlaylist = inPlaylist;
+    }
+
+    private boolean isInPlaylist = false;
+
     Audio(File filepath)
     {
         file = filepath;
+        isInPlaylist = false;
         resolveBPM();
     }
 
@@ -89,6 +100,16 @@ public class Audio
         }
     }
 
+    public int getDuration()
+    {
+        return duration;
+    }
+
+    public void setDuration(int duration)
+    {
+        this.duration = duration;
+    }
+
     private void resolveBPM()
     {
         try
@@ -137,5 +158,10 @@ public class Audio
     public void setBpm(int bpm)
     {
         this.bpm = bpm;
+    }
+
+    public boolean isInPlaylist()
+    {
+        return isInPlaylist;
     }
 }
